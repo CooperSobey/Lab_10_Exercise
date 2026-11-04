@@ -38,6 +38,7 @@ int main() {
     fullscreenTriangle[2].texCoords = {0, 2};
     // load vertex and fragment shaders:
     sf::Shader shader(std::filesystem::path{"main.vert"}, std::filesystem::path{"main.frag"});
+    sf::Shader cShader(std::filesystem::path{"main.vert"}, std::filesystem::path{"copy.frag"});
     // ... other shaders can go here...
 
     sf::Font openSansFont(EmbeddedFonts::OpenSans_SemiBold_ttf,
@@ -61,6 +62,12 @@ int main() {
     while (window.isOpen()) {
         ++i;
         bool moved = false;
+        sf::Texture prevFrame(window.getSize());
+        prevFrame.setSmooth(true);
+        sf::Vector2f prevCamCenterWorld = camCenterWorld;
+        float prevCamWorldUnitsPerPixel = worldUnitsPerPixel;
+
+        sf::Vector2f prevC = c;
 
         while (auto e = window.pollEvent()) {
             if (e->is<sf::Event::Closed>()) {
@@ -114,10 +121,26 @@ int main() {
             maxIters = std::min(maxIters * 2, TRUE_MAX_ITERS);
         }
         // TODO set shader uniforms here...
+        shader.setUniform("c", c);
+        shader.setUniform("MAX_ITERS", maxIters);
+        sf::Vector2f windowSize{window.getSize()};
+        shader.setUniform("windowSizePixels", windowSize);
+        shader.setUniform("camCenterWorld", camCenterWorld);
+        shader.setUniform("camWorldUnitsPerPixel", worldUnitsPerPixel);
+        shader.setUniform("prevCamCenterWorld", prevCamCenterWorld);
+        shader.setUniform("prevCamWorldUnitsPerPixel", prevCamWorldUnitsPerPixel);
+        shader.setUniform("prevFrame", prevFrame);
+        shader.setUniform("cChanged",i > 0 && c == prevC);
+
 
         window.clear(sf::Color::Black);
-        // TODO something.draw(fullscreenTriangle, &shader);
+        window.draw(fullscreenTriangle, &shader);
         // this might change as you finish more parts!
+        prevFrame.update(window);
+        prevCamCenterWorld = camCenterWorld;
+        prevCamWorldUnitsPerPixel = worldUnitsPerPixel;
+        prevC = c;
+
         cText.setString("c = (" + std::to_string(c.x) + ", " + std::to_string(c.y) + ")");
         cTextShadow.setString("c = (" + std::to_string(c.x) + ", " + std::to_string(c.y) + ")");
         window.draw(cTextShadow);
